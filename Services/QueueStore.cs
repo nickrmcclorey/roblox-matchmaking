@@ -1,11 +1,12 @@
 using System.Collections.Concurrent;
+using Matchmaking.Models;
 
 public class QueueStore
 {
     //                       Game Mode           Region Size Queue
     public ConcurrentDictionary<string, ConcurrentDictionary<string, List<ConcurrentQueue<int>>>> Queue = new();
     public ConcurrentDictionary<int, AutoResetEvent> CancellationTokens = new();
-    public ConcurrentDictionary<int, string> PlayerResults = new();
+    public ConcurrentDictionary<int, DatedItem<string>> PlayerResults = new();
     public const int MAX_PARTY_SIZE = 5;
 
     public AutoResetEvent AddToQueue(string gameMode, string region, int leaderId, int partySize)
@@ -33,7 +34,6 @@ public class QueueStore
             throw new BadHttpRequestException($"Party size cannot exceed {MAX_PARTY_SIZE}");
         }
 
-        CancellationTokenSource token = new CancellationTokenSource();
         CancellationTokens[leaderId] = new AutoResetEvent(false);
         Queue[gameMode][region][partySize - 1].Enqueue(leaderId);
         return CancellationTokens[leaderId];
