@@ -3,17 +3,16 @@ using Matchmaking.Models;
 
 public class QueueStore
 {
-    //                       Game Mode           Region Size Queue
-    public ConcurrentDictionary<string, ConcurrentDictionary<string, List<ConcurrentQueue<int>>>> Queue = new();
+    public ConcurrentDictionary<string, GameMode> Queue = new();
     public ConcurrentDictionary<int, AutoResetEvent> CancellationTokens = new();
-    public ConcurrentDictionary<int, DatedItem<string>> PlayerResults = new();
+    public ConcurrentDictionary<int, DatedValue<string>> PlayerResults = new();
     public const int MAX_PARTY_SIZE = 5;
 
     public AutoResetEvent AddToQueue(string gameMode, string region, int leaderId, int partySize)
     {
         if (!Queue.ContainsKey(gameMode))
         {
-            Queue[gameMode] = new ConcurrentDictionary<string, List<ConcurrentQueue<int>>>();
+            Queue[gameMode] = new GameMode(partySize);
         }
 
         if (!Queue[gameMode].ContainsKey(region))
