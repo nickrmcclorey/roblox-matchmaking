@@ -27,7 +27,6 @@ public class QueueStore
             };
         }
 
-
         if (partySize > MAX_PARTY_SIZE)
         {
             throw new BadHttpRequestException($"Party size cannot exceed {MAX_PARTY_SIZE}");
@@ -40,6 +39,4 @@ public class QueueStore
         CancellationTokens[leaderId] = new AutoResetEvent(false);
         Queue[gameMode][region][partySize - 1].Enqueue(leaderId);
     }
-
-
 }

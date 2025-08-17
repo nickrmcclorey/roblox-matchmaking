@@ -4,8 +4,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllersWithViews();
 
 builder.Services.AddHostedService<MatchMakerService>();
-builder.Services.AddSingleton<QueueStore>();
+builder.Services.AddHostedService<OldResultsPatrol>();
+builder.Services.AddHostedService<AccessCodeRequestor>();
 builder.Services.AddSingleton<AccessCodeStore>();
+builder.Services.AddSingleton<QueueStore>();
 
 var app = builder.Build();
 

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Concurrent;
+using Matchmaking.Models;
 
 namespace matchmaking.Controllers;
 
@@ -43,14 +44,18 @@ public class QueueController : Controller {
     
     private IActionResult WaitForQueueResult(int playerId) {
 
-        if (!_queueStore.CancellationTokens.ContainsKey(playerId)) {
-            return NotFound($"Player {playerId} not found in queue");
+        // When the matchmaker creates a game, it puts the result in PlayerResults BEFORE removing the CancellationToken
+        // It's important to check the Cancellation token before checking PlayerResults to avoid a race condition
+        if (!_queueStore.CancellationTokens.TryGetValue(playerId, out AutoResetEvent? wait)) {
+            if (!_queueStore.PlayerResults.TryGetValue(playerId, out DatedValue<string>? accessCode)) {
+                return NotFound($"Player {playerId} not found in queue");
+            }
+            return Ok(new { access_code = accessCode.Value });
         }
 
-        var wait = _queueStore.CancellationTokens[playerId];
         wait.WaitOne(1000 * 30);
         if (!_queueStore.PlayerResults.ContainsKey(playerId)) {
-            return Created();
+            return CreatedAtAction(nameof(Status), new { playerId }, new { message = "Matchmaking in progress" });
         }
 
         if (!_queueStore.PlayerResults.TryRemove(playerId, out var access_code)){

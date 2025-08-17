@@ -1,7 +1,7 @@
 Checklist:
 - ~~Matchmake any size team~~
 - [ ] Handle regions with lower # of players
-- [ ] System to clean up old matchmaking results
+- [ ] Test System to clean up old matchmaking results
 - [ ] System to get access codes
 - ~~Check on queue results~~
 - [ ] Withdraw from queue
