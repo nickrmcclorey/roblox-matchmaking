@@ -42,6 +42,7 @@ public class QueueController : Controller {
         return WaitForQueueResult(playerId);
     }
     
+    // TODO: move this to QueueStore
     private IActionResult WaitForQueueResult(int playerId) {
 
         // When the matchmaker creates a game, it puts the result in PlayerResults BEFORE removing the CancellationToken
@@ -58,7 +59,7 @@ public class QueueController : Controller {
             return CreatedAtAction(nameof(Status), new { playerId }, new { message = "Matchmaking in progress" });
         }
 
-        if (!_queueStore.PlayerResults.TryRemove(playerId, out var access_code)){
+        if (!_queueStore.PlayerResults.TryRemove(playerId, out var access_code)) {
             return StatusCode(500, "Match created but could not remove access code from dictionary");
         }
 
