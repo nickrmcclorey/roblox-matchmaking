@@ -6,8 +6,7 @@ namespace matchmaking.Controllers;
 
 
 [Route("queue")]
-public class QueueController : Controller
-{
+public class QueueController : Controller {
 
     private readonly ILogger<QueueController> _logger;
     private readonly QueueStore _queueStore;
@@ -17,8 +16,7 @@ public class QueueController : Controller
         ILogger<QueueController> logger,
         QueueStore queueStore,
         AccessCodeStore accessCodeStore
-    )
-    {
+    ) {
         _logger = logger;
         _queueStore = queueStore;
         _accessCodeStore = accessCodeStore;
@@ -34,27 +32,31 @@ public class QueueController : Controller
             _accessCodeStore.Enqueue(joinRequest.AccessCode);
         }
 
-        var wait = _queueStore.AddToQueue(gameMode, joinRequest.PreferredRegion, joinRequest.PlayerIds[0], joinRequest.PlayerIds.Count);
-        wait.WaitOne(1000 * 30); // Wait for 30 seconds
+        _queueStore.AddToQueue(gameMode, joinRequest.PreferredRegion, joinRequest.PlayerId, joinRequest.PartySize);
+        return WaitForQueueResult(joinRequest.PlayerId);
+    }
 
-        if (!_queueStore.PlayerResults.ContainsKey(joinRequest.PlayerIds[0]))
-        {
+    [HttpGet("status/{playerId}")]
+    public IActionResult Status(int playerId) {
+        return WaitForQueueResult(playerId);
+    }
+    
+    private IActionResult WaitForQueueResult(int playerId) {
+
+        if (!_queueStore.CancellationTokens.ContainsKey(playerId)) {
+            return NotFound($"Player {playerId} not found in queue");
+        }
+
+        var wait = _queueStore.CancellationTokens[playerId];
+        wait.WaitOne(1000 * 30);
+        if (!_queueStore.PlayerResults.ContainsKey(playerId)) {
             return Created();
         }
 
-        if (!_queueStore.PlayerResults.TryRemove(joinRequest.PlayerIds[0], out var access_code))
-        {
+        if (!_queueStore.PlayerResults.TryRemove(playerId, out var access_code)){
             return StatusCode(500, "Match created but could not remove access code from dictionary");
         }
 
         return Ok(new { access_code = access_code });
-    }
-
-    [HttpGet("{gameMode}/status/{playerId}")]
-    public IActionResult Status(string gameMode, int playerId)
-    {
-        _queueStore.CancellationTokens[playerId].WaitOne(1000 * 30); // Wait for 30 seconds
-        _queueStore.Queue[gameMode]["na"][0].Contains(playerId);
-        return Ok();
     }
 }
