@@ -32,7 +32,12 @@ public class AccessCodeRequestor : BackgroundService {
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 content.Headers.Add("x-api-key", Environment.GetEnvironmentVariable("ROBLOX_API_KEY"));
                 _logger.LogInformation("Asking for more codes, current count: {Count}", _accessCodeStore.Count);
-                await _httpClient.PostAsync(_url, content, stoppingToken);
+                var result = await _httpClient.PostAsync(_url, content, stoppingToken);
+                if (!result.IsSuccessStatusCode) {
+                    _logger.LogError("Failed to request access codes: {StatusCode}", result.StatusCode);
+                } else {
+                    _logger.LogInformation("Successfully requested access codes.");
+                }
 
                 _isRequestingCodes = true;
 
@@ -46,8 +51,14 @@ public class AccessCodeRequestor : BackgroundService {
                 var content = new StringContent(json, Encoding.UTF8, "application/json");
                 content.Headers.Add("x-api-key", Environment.GetEnvironmentVariable("ROBLOX_API_KEY"));
                 _logger.LogInformation("Asking for no more codes, current count: {Count}", _accessCodeStore.Count);
-                await _httpClient.PostAsync(_url, content, stoppingToken);
+                var response = await _httpClient.PostAsync(_url, content, stoppingToken);
                 _isRequestingCodes = false;
+
+                if (!response.IsSuccessStatusCode) {
+                    _logger.LogError("Failed to request no more access codes: {StatusCode}", response.StatusCode);
+                } else {
+                    _logger.LogInformation("Successfully requested no more access codes.");
+                }
             }
 
             await Task.Delay(5000, stoppingToken);
