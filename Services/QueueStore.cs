@@ -78,4 +78,15 @@ public class QueueStore {
         }
     }
 
+    public void CleanOldResults() {
+        var now = DateTime.UtcNow;
+        foreach (var playerId in PlayerResults.Keys) {
+            if (PlayerResults.TryGetValue(playerId, out var result)) {
+                if ((now - result.Date).TotalMinutes > 30) {
+                    PlayerResults.TryRemove(playerId, out _);
+                }
+            }
+        }
+    }
+
 }
