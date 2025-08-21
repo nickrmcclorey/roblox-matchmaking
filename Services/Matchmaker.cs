@@ -37,20 +37,13 @@ public class MatchMakerService : BackgroundService {
                         MatchmakingResult match = getMatch(queues, regions.TeamSize);
                         if (!match.success) {
                             // Requeue players that got removed from the queue
-                            _logger.LogWarning("Matchmaking failed for {GameMode} in region {Region}. Requeuing players.", gameMode, region);
-                            foreach (var player in match.Players) {
-                                _queueStore.CancellationTokens[player].Set();
-                                _queueStore.CancellationTokens.TryRemove(player, out _);
-                            }
+                            _logger.LogWarning("Matchmaking failed for {GameMode} in region {Region}.", gameMode, region);
+                            _queueStore.FailedToQueuePlayers(match.Players);
                             continue;
                         }
 
                         createdGame = true;
-                        foreach (var player in match.Players) {
-                            _queueStore.PlayerResults[player] = new DatedValue<string>(accessCode);
-                            _queueStore.CancellationTokens[player].Set();
-                            _queueStore.CancellationTokens.TryRemove(player, out _);
-                        }
+                        _queueStore.CreateMatch(match.Players, accessCode);
                     }
                 }
             }
@@ -91,7 +84,6 @@ public class MatchMakerService : BackgroundService {
         
         return false;
     }
-
 
     private static MatchmakingResult getMatch(List<ConcurrentQueue<int>> parties, int teamSize) {
         return getPlayers(teamSize, parties).Append(getPlayers(teamSize, parties));
