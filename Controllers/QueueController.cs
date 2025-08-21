@@ -37,7 +37,7 @@ public class QueueController : Controller {
             _accessCodeStore.Enqueue(joinRequest.AccessCode);
         }
 
-        _queueStore.AddToQueue(gameMode, joinRequest.PreferredRegion, joinRequest.PlayerId, joinRequest.PartySize);
+        _queueStore.AddToQueue(gameMode.ToLower(), joinRequest.PreferredRegion, joinRequest.PlayerId, joinRequest.PartySize);
         return WaitForQueueResult(joinRequest.PlayerId);
     }
 
