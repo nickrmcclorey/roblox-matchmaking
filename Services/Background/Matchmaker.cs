@@ -1,12 +1,11 @@
-using Matchmaking.Models;
 using System.Collections.Concurrent;
 
-public class MatchMakerService : BackgroundService {
-    private readonly ILogger<MatchMakerService> _logger;
+public class Matchmaker : BackgroundService {
+    private readonly ILogger<Matchmaker> _logger;
     private readonly QueueStore _queueStore;
     private readonly AccessCodeStore _accessCodeStore;
 
-    public MatchMakerService(ILogger<MatchMakerService> logger, QueueStore queueStore, AccessCodeStore accessCodeStore) {
+    public Matchmaker(ILogger<Matchmaker> logger, QueueStore queueStore, AccessCodeStore accessCodeStore) {
         _logger = logger;
         _queueStore = queueStore;
         _accessCodeStore = accessCodeStore;
@@ -66,19 +65,25 @@ public class MatchMakerService : BackgroundService {
         return sum;
     }
 
-    private static bool canMakeGame(List<int> queueNumbers, int teamSize, int teams) {
+    public static bool canMakeGame(List<int> queueNumbers, int teamSize, int teams) {
         if (queueNumbers[teamSize - 1] >= teams) {
             return true;
         } else if (teams == 0) {
             return true;
         }
 
-        for (int i = teamSize; i >= 1; i--) {
-            if (queueNumbers[i - 1] > 0) {
-                queueNumbers[i - 1]--;
-                if (canMakeGame(queueNumbers, teamSize, teams)) {
+        int peopleNeeded = teamSize;
+        int partySize = teamSize;
+        while (partySize > 0 && peopleNeeded > 0) {
+            if (queueNumbers[partySize - 1] > 0) {
+                queueNumbers[partySize - 1]--;
+                peopleNeeded -= partySize;
+                partySize = peopleNeeded;
+                if (peopleNeeded == 0) {
                     return canMakeGame(queueNumbers, teamSize, teams - 1);
                 }
+            } else {
+                partySize--;
             }
         }
         

@@ -1,6 +1,6 @@
 public class WaitResult {
-    public string AccessCode { get; set; }
-    public string Message { get; set; }
+    public string? AccessCode { get; set; }
+    public required string Message { get; set; }
     public ResultType Status { get; set; }
 
 
