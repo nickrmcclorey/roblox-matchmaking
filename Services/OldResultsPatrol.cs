@@ -10,16 +10,7 @@ public class OldResultsPatrol : BackgroundService {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
         while (!stoppingToken.IsCancellationRequested) {
             // Check for old results and clean them up
-            var now = DateTime.UtcNow;
-            foreach (var playerId in _queueStore.PlayerResults.Keys) {
-                if (_queueStore.PlayerResults.TryGetValue(playerId, out var result)) {
-                    if ((now - result.Date).TotalMinutes > 30) {
-                        _queueStore.PlayerResults.TryRemove(playerId, out _);
-                        _logger.LogInformation($"Removed old result for player {playerId}");
-                    }
-                }
-            }
-
+            _queueStore.CleanOldResults();
             await Task.Delay(60000, stoppingToken); // Check every minute
         }
     }
