@@ -5,6 +5,7 @@ builder.Services.AddControllersWithViews();
 
 builder.Services.AddHostedService<MatchMakerService>();
 builder.Services.AddSingleton<QueueStore>();
+builder.Services.AddSingleton<AccessCodeStore>();
 
 var app = builder.Build();
 

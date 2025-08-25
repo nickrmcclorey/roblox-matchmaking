@@ -11,25 +11,29 @@ public class QueueController : Controller
 
     private readonly ILogger<QueueController> _logger;
     private readonly QueueStore _queueStore;
+    private readonly AccessCodeStore _accessCodeStore;
 
     public QueueController(
         ILogger<QueueController> logger,
-        QueueStore queueStore
+        QueueStore queueStore,
+        AccessCodeStore accessCodeStore
     )
     {
         _logger = logger;
         _queueStore = queueStore;
-    }
-
-    public IActionResult Index()
-    {
-        return Ok("Hello World!");
+        _accessCodeStore = accessCodeStore;
     }
 
 
     [HttpPost("{gameMode}/join")]
     public IActionResult Join(string gameMode, [FromBody] JoinRequest joinRequest)
     {
+
+        if (joinRequest.AccessCode != null)
+        {
+            _accessCodeStore.Enqueue(joinRequest.AccessCode);
+        }
+
         var wait = _queueStore.AddToQueue(gameMode, joinRequest.PreferredRegion, joinRequest.PlayerIds[0], joinRequest.PlayerIds.Count);
         wait.WaitOne(1000 * 30); // Wait for 30 seconds
 
