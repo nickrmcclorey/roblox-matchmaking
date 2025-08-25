@@ -27,6 +27,14 @@ public class GameModeController : Controller {
         return Ok(gameModeData.Keys.ToList());
     }
 
+    [HttpGet("gamemodes/{gameMode}/players")]
+    public IActionResult GetPlayersInGameMode(string gameMode) {
+        if (!_queueStore.Queue.TryGetValue(gameMode, out var gameModeData)) {
+            return NotFound($"Game mode {gameMode} not found");
+        }
+        return Ok(gameModeData.Values.ToList());
+    }
+
     [HttpGet("gamemodes/regions")]
     public IActionResult GetAllRegions() {
         var regions = new HashSet<string>();
