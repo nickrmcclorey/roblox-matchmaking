@@ -27,7 +27,7 @@ public class QueueController : Controller
     }
 
 
-    [HttpGet("{gameMode}/join")]
+    [HttpPost("{gameMode}/join")]
     public IActionResult Join(string gameMode, [FromBody] JoinRequest joinRequest)
     {
         var wait = _queueStore.AddToQueue(gameMode, joinRequest.PreferredRegion, joinRequest.PlayerIds[0], joinRequest.PlayerIds.Count);
@@ -37,12 +37,20 @@ public class QueueController : Controller
         {
             return Created();
         }
-        
+
         if (!_queueStore.PlayerResults.TryRemove(joinRequest.PlayerIds[0], out var access_code))
         {
             return StatusCode(500, "Match created but could not remove access code from dictionary");
         }
 
         return Ok(new { access_code = access_code });
+    }
+
+    [HttpGet("{gameMode}/status/{playerId}")]
+    public IActionResult Status(string gameMode, int playerId)
+    {
+        _queueStore.CancellationTokens[playerId].WaitOne(1000 * 30); // Wait for 30 seconds
+        _queueStore.Queue[gameMode]["na"][0].Contains(playerId);
+        return Ok();
     }
 }

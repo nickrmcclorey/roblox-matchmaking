@@ -1,3 +1,4 @@
+using Matchmaking.Models;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
@@ -38,18 +39,17 @@ public class MatchMakerService : BackgroundService
                         players.Add(leaderId);
                         queues[0].TryDequeue(out int secondLeaderId);
                         players.Add(secondLeaderId);
-                        _queueStore.PlayerResults[leaderId] = "AccessCode1";
-                        _queueStore.PlayerResults[secondLeaderId] = "AccessCode1";
+                        _queueStore.PlayerResults[leaderId] = new DatedItem<string>("AccessCode1");
+                        _queueStore.PlayerResults[secondLeaderId] = new DatedItem<string>("AccessCode1");
                         _queueStore.CancellationTokens[leaderId].Set();
                         _queueStore.CancellationTokens[secondLeaderId].Set();
                         _queueStore.CancellationTokens.TryRemove(leaderId, out _);
                         _queueStore.CancellationTokens.TryRemove(secondLeaderId, out _);
                     }
-
                 }
             }
 
-            await Task.Delay(5000, stoppingToken); // Delay for 5 seconds before the next iteration            
+            await Task.Delay(1, stoppingToken); // Delay for 5 seconds before the next iteration            
             if (stoppingToken.IsCancellationRequested)
             {
                 _logger.LogInformation("Background service is stopping at: {time}", DateTimeOffset.Now);
