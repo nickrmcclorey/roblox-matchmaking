@@ -2,6 +2,7 @@ using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using System.Collections.Concurrent;
 using Matchmaking.Models;
+using System.Numerics;
 
 namespace matchmaking.Controllers;
 
@@ -23,50 +24,36 @@ public class QueueController : Controller {
         _accessCodeStore = accessCodeStore;
     }
 
-
     [HttpPost("{gameMode}/join")]
-    public IActionResult Join(string gameMode, [FromBody] JoinRequest? joinRequest)
-    {
-        if (joinRequest == null)
-        {
+    public IActionResult Join(string gameMode, [FromBody] JoinRequest? joinRequest) {
+        if (joinRequest == null) {
             return BadRequest("Couldn't parse body");
         }
 
-        if (joinRequest.AccessCode != null)
-        {
+        if (joinRequest.AccessCode != null) {
             _accessCodeStore.Enqueue(joinRequest.AccessCode);
         }
 
-        _queueStore.AddToQueue(gameMode.ToLower(), joinRequest.PreferredRegion, joinRequest.PlayerId, joinRequest.PartySize);
-        return WaitForQueueResult(joinRequest.PlayerId);
+        var result = _queueStore.AddToQueue(gameMode.ToLower(), joinRequest.PreferredRegion, joinRequest.PlayerId, joinRequest.PartySize);
+        return GetResult(result, joinRequest.PlayerId);
     }
 
     [HttpGet("status/{playerId}")]
     public IActionResult Status(int playerId) {
-        return WaitForQueueResult(playerId);
+        return GetResult(_queueStore.WaitForQueueResult(playerId), playerId);
     }
-    
-    // TODO: move this to QueueStore
-    private IActionResult WaitForQueueResult(int playerId) {
 
-        // When the matchmaker creates a game, it puts the result in PlayerResults BEFORE removing the CancellationToken
-        // It's important to check the Cancellation token before checking PlayerResults to avoid a race condition
-        if (!_queueStore.CancellationTokens.TryGetValue(playerId, out AutoResetEvent? wait)) {
-            if (!_queueStore.PlayerResults.TryGetValue(playerId, out DatedValue<string>? accessCode)) {
-                return NotFound($"Player {playerId} not found in queue");
-            }
-            return Ok(new { access_code = accessCode.Value });
-        }
-
-        wait.WaitOne(1000 * 30);
-        if (!_queueStore.PlayerResults.ContainsKey(playerId)) {
+    private IActionResult GetResult(WaitResult result, int playerId) {
+        if (result.Status == WaitResult.ResultType.Error) {
+            return StatusCode(500, result.Message);
+        } else if (result.Status == WaitResult.ResultType.BadRequest) {
+            return BadRequest(result.Message);
+        } else if (result.Status == WaitResult.ResultType.StillWaiting) {
             return CreatedAtAction(nameof(Status), new { playerId }, new { message = "Matchmaking in progress" });
+        } else if (result.Status == WaitResult.ResultType.Ready) {
+            return Ok(new { access_code = result.AccessCode });
+        } else {
+            return StatusCode(500, "Unknown result type");
         }
-
-        if (!_queueStore.PlayerResults.TryRemove(playerId, out var access_code)) {
-            return StatusCode(500, "Match created but could not remove access code from dictionary");
-        }
-
-        return Ok(new { access_code = access_code });
     }
 }
