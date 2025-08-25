@@ -3,20 +3,18 @@ using Matchmaking.Models;
 
 public class QueueStore
 {
+    // TODO: Expose these as IReadOnlyDictionary to prevent external modification
     public ConcurrentDictionary<string, GameMode> Queue = new();
     public ConcurrentDictionary<int, AutoResetEvent> CancellationTokens = new();
     public ConcurrentDictionary<int, DatedValue<string>> PlayerResults = new();
     public const int MAX_PARTY_SIZE = 5;
 
-    public void AddToQueue(string gameMode, string region, int leaderId, int partySize)
-    {
-        if (!Queue.ContainsKey(gameMode))
-        {
+    public void AddToQueue(string gameMode, string region, int leaderId, int partySize) {
+        if (!Queue.ContainsKey(gameMode)) {
             Queue[gameMode] = new GameMode(partySize);
         }
 
-        if (!Queue[gameMode].ContainsKey(region))
-        {
+        if (!Queue[gameMode].ContainsKey(region)) {
             Queue[gameMode][region] = new List<ConcurrentQueue<int>>(5)
             {
                 new ConcurrentQueue<int>(),
@@ -27,8 +25,7 @@ public class QueueStore
             };
         }
 
-        if (partySize > MAX_PARTY_SIZE)
-        {
+        if (partySize > MAX_PARTY_SIZE) {
             throw new BadHttpRequestException($"Party size cannot exceed {MAX_PARTY_SIZE}");
         }
 
