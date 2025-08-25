@@ -8,6 +8,7 @@ builder.Services.AddHostedService<OldResultsPatrol>();
 builder.Services.AddHostedService<AccessCodeRequestor>();
 builder.Services.AddSingleton<AccessCodeStore>();
 builder.Services.AddSingleton<QueueStore>();
+builder.Services.AddSingleton<UnfilledGamesStore>();
 
 var app = builder.Build();
 

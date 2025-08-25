@@ -10,8 +10,13 @@ public class UnfilledGameController : Controller {
     }
 
     [HttpPost("{gameModeKey}/fill")]
-    public void AddUnfilledGame(string gameModeKey, [FromBody] UnfilledGame unfilledGame) {
-        _unfilledGamesStore.Enqueue(gameModeKey, unfilledGame);
+    public void AddUnfilledGame(string gameModeKey, [FromBody] UnfilledGameRequest unfilledGame) {
+        _unfilledGamesStore.Add(new UnfilledGame
+        {
+            gameMode = gameModeKey,
+            AccessCode = unfilledGame.AccessCode,
+            ExtraPlayersNeeded = unfilledGame.ExtraPlayersNeeded
+        });
     }
 
 }

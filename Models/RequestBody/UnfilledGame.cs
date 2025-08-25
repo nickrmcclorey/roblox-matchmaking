@@ -1,6 +1,6 @@
-public class UnfilledGame {
+public class UnfilledGameRequest {
 
-    public int AccessCode { get; set; }
-    public int extraPlayersNeeded { get; set; }
+    public required string AccessCode { get; set; }
+    public required int ExtraPlayersNeeded { get; set; }
 
 }

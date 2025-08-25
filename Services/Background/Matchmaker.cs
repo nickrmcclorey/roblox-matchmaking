@@ -4,11 +4,18 @@ public class Matchmaker : BackgroundService {
     private readonly ILogger<Matchmaker> _logger;
     private readonly QueueStore _queueStore;
     private readonly AccessCodeStore _accessCodeStore;
+    private readonly UnfilledGamesStore _unfilledGamesStore;
 
-    public Matchmaker(ILogger<Matchmaker> logger, QueueStore queueStore, AccessCodeStore accessCodeStore) {
+    public Matchmaker(
+        ILogger<Matchmaker> logger,
+        QueueStore queueStore,
+        AccessCodeStore accessCodeStore,
+        UnfilledGamesStore unfilledGamesStore
+    ) {
         _logger = logger;
         _queueStore = queueStore;
         _accessCodeStore = accessCodeStore;
+        _unfilledGamesStore = unfilledGamesStore;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
@@ -17,6 +24,7 @@ public class Matchmaker : BackgroundService {
         while (!stoppingToken.IsCancellationRequested) {
 
             bool createdGame = false;
+            FillGames();
 
             // Iterate through the queue
             foreach (var pair in _queueStore.Queue) {
@@ -55,6 +63,20 @@ public class Matchmaker : BackgroundService {
         }
         
         _logger.LogInformation("Background service is stopping at: {time}", DateTimeOffset.Now);
+    }
+
+    private void FillGames() {
+        _unfilledGamesStore.Mutex.WaitOne();
+        foreach (var unfilledGame in _unfilledGamesStore) {
+            foreach (var regionPair in _queueStore.Queue[unfilledGame.Value.gameMode]) {
+                var queue = regionPair.Value[unfilledGame.Value.ExtraPlayersNeeded - 1];
+                if (!queue.IsEmpty && queue.TryDequeue(out var playerId)) {
+                    _unfilledGamesStore.Remove(unfilledGame.Value.AccessCode);
+                    _queueStore.CreateMatch(new List<int>() { playerId }, unfilledGame.Value.AccessCode);
+                }
+            }
+        }
+        _unfilledGamesStore.Mutex.ReleaseMutex();
     }
 
     private static int queueSize(List<ConcurrentQueue<int>> queues) {

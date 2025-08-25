@@ -1,35 +1,17 @@
 using System.Collections.Concurrent;
 
-public class UnfilledGamesStore {
+public class UnfilledGamesStore : Dictionary<string, UnfilledGame> {
 
-    public ConcurrentDictionary<string, ConcurrentQueue<UnfilledGame>> UnfilledGames = new();
+    public Mutex Mutex = new();
 
-    public void Enqueue(string gameModeKey, UnfilledGame unfilledGame) {
-
-        if (!UnfilledGames.TryGetValue(gameModeKey, out var queue)) {
-            UnfilledGames[gameModeKey] = new ConcurrentQueue<UnfilledGame>();
-            queue = UnfilledGames[gameModeKey];
+    public void Add(UnfilledGame unfilledGame) {
+        Mutex.WaitOne();
+        if (this.ContainsKey(unfilledGame.AccessCode)) {
+            this[unfilledGame.AccessCode].ExtraPlayersNeeded += unfilledGame.ExtraPlayersNeeded;
+        } else {
+            this[unfilledGame.AccessCode] = unfilledGame;
         }
 
-        queue.Enqueue(unfilledGame);
+        Mutex.ReleaseMutex();
     }
-
-    public UnfilledGame? Peek(string gameModeKey) {
-        if (UnfilledGames.TryGetValue(gameModeKey, out var queue)) {
-            if (queue.TryPeek(out var unfilledGame)) {
-                return unfilledGame;
-            }
-        }
-        return null;
-    }
-
-    public UnfilledGame? Dequeue(string gameModeKey) {
-        if (UnfilledGames.TryGetValue(gameModeKey, out var queue)) {
-            if (queue.TryDequeue(out var unfilledGame)) {
-                return unfilledGame;
-            }
-        }
-        return null;
-    }
-
 }
