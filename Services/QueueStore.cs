@@ -8,7 +8,7 @@ public class QueueStore
     public ConcurrentDictionary<int, DatedValue<string>> PlayerResults = new();
     public const int MAX_PARTY_SIZE = 5;
 
-    public AutoResetEvent AddToQueue(string gameMode, string region, int leaderId, int partySize)
+    public void AddToQueue(string gameMode, string region, int leaderId, int partySize)
     {
         if (!Queue.ContainsKey(gameMode))
         {
@@ -33,9 +33,12 @@ public class QueueStore
             throw new BadHttpRequestException($"Party size cannot exceed {MAX_PARTY_SIZE}");
         }
 
+        if (CancellationTokens.ContainsKey(leaderId)) {
+            throw new BadHttpRequestException($"Leader ID {leaderId} already in queue");
+        }
+
         CancellationTokens[leaderId] = new AutoResetEvent(false);
         Queue[gameMode][region][partySize - 1].Enqueue(leaderId);
-        return CancellationTokens[leaderId];
     }
 
 
