@@ -15,7 +15,7 @@ public class GameModeController : Controller {
 
     [HttpGet("gamemodes")]
     public IActionResult GetGameModes() {
-        var gameModes = _queueStore.Queue.Values.ToList();
+        var gameModes = _queueStore.Queue.Keys.ToList();
         return Ok(gameModes);
     }
 

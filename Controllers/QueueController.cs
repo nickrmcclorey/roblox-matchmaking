@@ -25,8 +25,12 @@ public class QueueController : Controller {
 
 
     [HttpPost("{gameMode}/join")]
-    public IActionResult Join(string gameMode, [FromBody] JoinRequest joinRequest)
+    public IActionResult Join(string gameMode, [FromBody] JoinRequest? joinRequest)
     {
+        if (joinRequest == null)
+        {
+            return BadRequest("Couldn't parse body");
+        }
 
         if (joinRequest.AccessCode != null)
         {
