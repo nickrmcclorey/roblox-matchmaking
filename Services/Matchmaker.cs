@@ -92,17 +92,6 @@ public class MatchMakerService : BackgroundService {
         return false;
     }
 
-    private static void findWays(int target, List<int> current, List<List<int>> results) {
-        if (target == 0) {
-            results.Add(new List<int>(current));
-            return;
-        }
-        for (int i = 1; i <= target; i++) {
-            current.Add(i);
-            findWays(target - i, current, results);
-            current.RemoveAt(current.Count - 1);
-        }
-    }
 
     private static MatchmakingResult getMatch(List<ConcurrentQueue<int>> parties, int teamSize) {
         return getPlayers(teamSize, parties).Append(getPlayers(teamSize, parties));
