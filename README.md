@@ -5,4 +5,4 @@ Checklist:
 - System to get access codes
 - ~~Check on queue results~~
 - Withdraw from queue
-- Endpoints to add gamemodes and regions
+- ~~Put players in existing games~~

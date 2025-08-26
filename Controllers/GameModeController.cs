@@ -21,8 +21,8 @@ public class GameModeController : Controller {
 
     [HttpGet("gamemodes/{gameMode}/regions")]
     public IActionResult GetRegions(string gameMode) {
-        if (!_queueStore.Queue.TryGetValue(gameMode, out var gameModeData)) {
-            return NotFound($"Game mode {gameMode} not found");
+        if (!_queueStore.Queue.TryGetValue(gameMode.ToLower(), out var gameModeData)) {
+            return NotFound($"Game mode {gameMode.ToLower()} not found");
         }
         return Ok(gameModeData.Keys.ToList());
     }
