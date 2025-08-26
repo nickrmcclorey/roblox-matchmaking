@@ -23,4 +23,10 @@ public class UnfilledGameController : Controller {
         return Ok(_unfilledGamesStore.Values);
     }
 
+    [HttpDelete("{accessCode}")]
+    public IActionResult RemoveUnfilledGame(string accessCode) {
+        _unfilledGamesStore.Remove(accessCode);
+        return Ok();
+    }
+
 }
