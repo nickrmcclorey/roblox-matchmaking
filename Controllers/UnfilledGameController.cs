@@ -15,12 +15,18 @@ public class UnfilledGameController : Controller {
     }
 
     [HttpPost("")]
-    public void AddUnfilledGame([FromBody] UnfilledGame unfilledGame) {
+    public IActionResult AddUnfilledGame([FromBody] UnfilledGame unfilledGame) {
+        if (!unfilledGame.GameMode.Contains('-') || !Int32.TryParse(unfilledGame.GameMode.Split('-')[1], out int teamSize)) {
+            return BadRequest("Game mode must be in format <name>-<team size>");
+        }
+
         _unfilledGamesStore.Add(new UnfilledGame {
             GameMode = unfilledGame.GameMode.ToLower(),
             AccessCode = unfilledGame.AccessCode,
             ExtraPlayersNeeded = unfilledGame.ExtraPlayersNeeded
         });
+
+        return Ok();
     }
 
     [HttpDelete("{accessCode}")]

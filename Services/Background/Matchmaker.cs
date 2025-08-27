@@ -72,7 +72,7 @@ public class Matchmaker : BackgroundService {
                 continue;
             }
             foreach (var regionQueue in _queueStore.Queue[unfilledGame.GameMode].Values) {
-                for (int partySize = unfilledGame.ExtraPlayersNeeded; partySize > 0; partySize--) {
+                for (int partySize = Math.Min(unfilledGame.ExtraPlayersNeeded, regionQueue.Count); partySize > 0; partySize--) {
 
                     if (!regionQueue[partySize - 1].IsEmpty && regionQueue[partySize - 1].TryDequeue(out var playerId)) {
                         _queueStore.CreateMatch(new List<int>() { playerId }, unfilledGame.AccessCode);
