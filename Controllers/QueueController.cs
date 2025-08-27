@@ -1,13 +1,9 @@
-using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
-using System.Collections.Concurrent;
-using Matchmaking.Models;
-using System.Numerics;
 
 namespace matchmaking.Controllers;
 
 
-[Route("queue")]
+[Route("/queue/players")]
 public class QueueController : Controller {
 
     private readonly ILogger<QueueController> _logger;
@@ -24,8 +20,21 @@ public class QueueController : Controller {
         _accessCodeStore = accessCodeStore;
     }
 
-    [HttpPost("{gameMode}/join")]
-    public IActionResult Join(string gameMode, [FromBody] JoinRequest? joinRequest) {
+    [HttpGet("")]
+    public IActionResult GetPlayersInGameMode([FromQuery] string? gameMode) {
+        if (String.IsNullOrWhiteSpace(gameMode)) {
+            return Ok(_queueStore.Queue);
+        }
+
+        if (!_queueStore.Queue.TryGetValue(gameMode, out var gameModeData)) {
+            return NotFound($"Game mode {gameMode} not found");
+        }
+
+        return Ok(gameModeData);
+    }
+
+    [HttpPost("")]
+    public IActionResult Join([FromBody] JoinRequest? joinRequest) {
         if (joinRequest == null) {
             return BadRequest("Couldn't parse body");
         }
@@ -34,13 +43,18 @@ public class QueueController : Controller {
             _accessCodeStore.Enqueue(joinRequest.AccessCode);
         }
 
-        var result = _queueStore.AddToQueue(gameMode.ToLower(), joinRequest.PreferredRegion, joinRequest.PlayerId, joinRequest.PartySize);
+        var result = _queueStore.AddToQueue(joinRequest.GameMode.ToLower(), joinRequest.PreferredRegion, joinRequest.PlayerId, joinRequest.PartySize);
         return GetResult(result, joinRequest.PlayerId);
     }
 
-    [HttpGet("status/{playerId}")]
+    [HttpGet("{playerId}")]
     public IActionResult Status(int playerId) {
         return GetResult(_queueStore.WaitForQueueResult(playerId), playerId);
+    }
+
+    [HttpDelete("{playerId}")]
+    public IActionResult Leave(int playerId) {
+        return NotFound("Not implemented");
     }
 
     private IActionResult GetResult(WaitResult result, int playerId) {

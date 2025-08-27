@@ -1,5 +1,6 @@
 Checklist:
 - ~~Matchmake any size team~~
+- Add smaller groups of people to unfilled games
 - Handle regions with lower # of players
 - Test System to clean up old matchmaking results
 - System to get access codes

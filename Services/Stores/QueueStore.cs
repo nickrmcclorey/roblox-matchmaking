@@ -1,13 +1,15 @@
 using System.Collections.Concurrent;
 using Matchmaking.Models;
-using Microsoft.AspNetCore.Mvc;
 
 public class QueueStore {
-    // TODO: Expose these as IReadOnlyDictionary to prevent external modification
-    public ConcurrentDictionary<string, GameMode> Queue = new();
-    private ConcurrentDictionary<int, AutoResetEvent> CancellationTokens = new();
-    private ConcurrentDictionary<int, DatedValue<string>> PlayerResults = new();
+    private readonly ConcurrentDictionary<int, AutoResetEvent> CancellationTokens = new();
+    private readonly ConcurrentDictionary<int, DatedValue<string>> PlayerResults = new();
     private const int MAX_PARTY_SIZE = 6;
+
+    private readonly ConcurrentDictionary<string, GameMode> _queue = new(); 
+    public IReadOnlyDictionary<string, GameMode> Queue {
+        get { return _queue; }
+    }
 
     public WaitResult AddToQueue(string gameModeKey, string regionKey, int leaderId, int partySize) {
         if (partySize > MAX_PARTY_SIZE) {
@@ -18,13 +20,13 @@ public class QueueStore {
             return WaitResult.BadRequest($"Leader ID {leaderId} already in queue");
         }
 
-        if (!Queue.TryGetValue(gameModeKey, out var gameMode)) {
+        if (!_queue.TryGetValue(gameModeKey, out var gameMode)) {
             if (!gameModeKey.Contains('-') || !Int32.TryParse(gameModeKey.Split('-')[1], out int teamSize)) {
                 return WaitResult.BadRequest("Game mode must be in format <name>-<team size>");
             }
 
-            Queue[gameModeKey] = new GameMode(teamSize);
-            gameMode = Queue[gameModeKey];
+            _queue[gameModeKey] = new GameMode(teamSize);
+            gameMode = _queue[gameModeKey];
         }
 
         if (!gameMode.TryGetValue(regionKey, out var regionQueue)) {
