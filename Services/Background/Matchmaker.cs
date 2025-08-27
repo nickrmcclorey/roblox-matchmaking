@@ -68,8 +68,10 @@ public class Matchmaker : BackgroundService {
     private void FillGames() {
         _unfilledGamesStore.Mutex.WaitOne();
         foreach (var unfilledGame in _unfilledGamesStore.Values) {
-            foreach (var regionPair in _queueStore.Queue[unfilledGame.GameMode]) {
-                var regionQueue = regionPair.Value;
+            if (!_queueStore.Queue.ContainsKey(unfilledGame.GameMode)) {
+                continue;
+            }
+            foreach (var regionQueue in _queueStore.Queue[unfilledGame.GameMode].Values) {
                 for (int partySize = unfilledGame.ExtraPlayersNeeded; partySize > 0; partySize--) {
 
                     if (!regionQueue[partySize - 1].IsEmpty && regionQueue[partySize - 1].TryDequeue(out var playerId)) {
@@ -78,8 +80,9 @@ public class Matchmaker : BackgroundService {
                         if (unfilledGame.ExtraPlayersNeeded <= 0) {
                             _unfilledGamesStore.Remove(unfilledGame.AccessCode);
                         }
+                        break;
                     }
-                    
+
                 }
             }
         }
