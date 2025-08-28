@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging.AzureAppServices;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -9,6 +11,15 @@ builder.Services.AddHostedService<AccessCodeRequestor>();
 builder.Services.AddSingleton<AccessCodeStore>();
 builder.Services.AddSingleton<QueueStore>();
 builder.Services.AddSingleton<UnfilledGamesStore>();
+
+builder.Logging.AddAzureWebAppDiagnostics();
+builder.Services.Configure<AzureFileLoggerOptions>(options =>
+{
+    options.FileName = "logs-";
+    options.FileSizeLimit = 50 * 1024;
+    options.RetainedFileCountLimit = 5;
+});
+
 
 var app = builder.Build();
 
