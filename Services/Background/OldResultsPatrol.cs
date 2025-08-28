@@ -9,9 +9,15 @@ public class OldResultsPatrol : BackgroundService {
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
         while (!stoppingToken.IsCancellationRequested) {
+            try {
+                _queueStore.CleanOldResults();
+            } catch (Exception e) {
+                _logger.LogError(e.ToString());
+            }
             // Check for old results and clean them up
-            _queueStore.CleanOldResults();
             await Task.Delay(60000, stoppingToken); // Check every minute
         }
+
+        _logger.LogInformation("Background service is stopping at: {time}", DateTimeOffset.Now);
     }
 }

@@ -14,4 +14,23 @@ public class UnfilledGamesStore : Dictionary<string, UnfilledGame> {
 
         Mutex.ReleaseMutex();
     }
+
+    public void FillGame(string accessCode, int players) {
+        if (!this.ContainsKey(accessCode)) {
+            return;
+        }
+
+        Mutex.WaitOne();
+        this[accessCode].ExtraPlayersNeeded -= players;
+        if (this[accessCode].ExtraPlayersNeeded <= 0) {
+            base.Remove(accessCode);
+        }
+        Mutex.ReleaseMutex();
+    }
+
+    public new void Remove(string key) {
+        Mutex.WaitOne();
+        base.Remove(key);
+        Mutex.ReleaseMutex();
+    }
 }

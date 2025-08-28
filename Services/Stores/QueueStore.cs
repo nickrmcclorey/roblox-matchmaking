@@ -5,13 +5,25 @@ public class QueueStore {
     private readonly ConcurrentDictionary<int, AutoResetEvent> CancellationTokens = new();
     private readonly ConcurrentDictionary<int, DatedValue<string>> PlayerResults = new();
     private const int MAX_PARTY_SIZE = 6;
+    private readonly ILogger<QueueStore> _logger;
+    private readonly UnfilledGamesStore _unfilledGamesStore;
 
-    private readonly ConcurrentDictionary<string, GameMode> _queue = new(); 
-    public IReadOnlyDictionary<string, GameMode> Queue {
-        get { return _queue; }
+    // queue is only writable from this class. Other classes can only read the data.
+    private readonly ConcurrentDictionary<string, GameMode> _queue = new();
+    public IReadOnlyDictionary<string, IReadOnlyDictionary<string, IReadOnlyCollection<IReadOnlyCollection<int>>>> Queue {
+        get { return (IReadOnlyDictionary<string, IReadOnlyDictionary<string, IReadOnlyCollection<IReadOnlyCollection<int>>>>)_queue; }
+    }
+
+    public QueueStore(
+        ILogger<QueueStore> logger,
+        UnfilledGamesStore unfilledGameStore
+    ) {
+        _logger = logger;
+        _unfilledGamesStore = unfilledGameStore;
     }
 
     public WaitResult AddToQueue(string gameModeKey, string regionKey, int leaderId, int partySize) {
+
         if (partySize > MAX_PARTY_SIZE) {
             return WaitResult.BadRequest($"Party size cannot exceed {MAX_PARTY_SIZE}");
         }
@@ -29,16 +41,8 @@ public class QueueStore {
             gameMode = _queue[gameModeKey];
         }
 
-        if (!gameMode.TryGetValue(regionKey, out var regionQueue)) {
-            gameMode[regionKey] = new List<ConcurrentQueue<int>>(gameMode.TeamSize);
-            regionQueue = gameMode[regionKey];
-            for (int i = 0; i < gameMode.TeamSize; i++) {
-                regionQueue.Add(new ConcurrentQueue<int>());
-            }
-        }
-
+        gameMode.Enqueue(regionKey, partySize, leaderId);
         CancellationTokens[leaderId] = new AutoResetEvent(false);
-        regionQueue[partySize - 1].Enqueue(leaderId);
         return WaitForQueueResult(leaderId);
     }
 
@@ -65,7 +69,60 @@ public class QueueStore {
         return WaitResult.Ready(code.Value);
     }
 
-    public void CreateMatch(List<int> players, string accessCode) {
+    public void CreateMatch(ConcurrentQueue<string> accessCodes) {
+        int createdGames = 0;
+        foreach (var pair in _queue) {
+            var gameMode = pair.Key;
+            var regions = pair.Value;
+            foreach (var regionPair in regions) {
+                var region = regionPair.Key;
+                var queues = regionPair.Value;
+                if (queues.CanMakeGame(regions.TeamSize, 2)) {
+                    var success = accessCodes.TryDequeue(out string? accessCode);
+                    if (!success || String.IsNullOrEmpty(accessCode)) {
+                        _logger.LogWarning("No access code available for matchmaking");
+                        break;
+                    }
+
+                    MatchmakingResult match = queues.GetMatch(regions.TeamSize);
+                    if (!match.success) {
+                        // Requeue players that got removed from the queue
+                        _logger.LogWarning("Matchmaking failed for {GameMode} in region {Region}.", gameMode, region);
+                        FailedToQueuePlayers(match.Players);
+                        continue;
+                    }
+
+                    SendPlayersToGame(match.Players, accessCode);
+                    createdGames += 1;
+                }
+            }
+        }
+    }
+
+    public void FillGames() {
+        _unfilledGamesStore.Mutex.WaitOne();
+        foreach (var unfilledGame in _unfilledGamesStore.Values) {
+            if (!_queue.ContainsKey(unfilledGame.GameMode)) {
+                continue;
+            }
+            foreach (var regionQueue in _queue[unfilledGame.GameMode].Values) {
+                for (int partySize = Math.Min(unfilledGame.ExtraPlayersNeeded, regionQueue.Count); partySize > 0; partySize--) {
+
+                    if (!regionQueue[partySize - 1].IsEmpty && regionQueue[partySize - 1].TryDequeue(out var playerId)) {
+                        SendPlayersToGame(new List<int>() { playerId }, unfilledGame.AccessCode);
+                        unfilledGame.ExtraPlayersNeeded -= partySize;
+                        if (unfilledGame.ExtraPlayersNeeded <= 0) {
+                            _unfilledGamesStore.Remove(unfilledGame.AccessCode);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
+        _unfilledGamesStore.Mutex.ReleaseMutex();
+    }
+
+    public void SendPlayersToGame(List<int> players, string accessCode) {
         foreach (var player in players) {
             PlayerResults[player] = new DatedValue<string>(accessCode);
             CancellationTokens[player].Set();

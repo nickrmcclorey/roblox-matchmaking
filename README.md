@@ -3,9 +3,9 @@ Checklist:
 - ~~Add smaller groups of people to unfilled games~~
 - Handle regions with lower # of players
 - Test System to clean up old matchmaking results
-- System to get access codes
+- ~~System to get access codes~~
 - ~~Check on queue results~~
 - Withdraw from queue
 - ~~Put players in existing games~~
 - Wrap background tasks in try/catch
-- [Configure logging](https://www.youtube.com/watch?v=jHKUvROGyR0)
+- ~~[Configure logging](https://www.youtube.com/watch?v=jHKUvROGyR0)~~
