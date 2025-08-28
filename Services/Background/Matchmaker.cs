@@ -20,15 +20,18 @@ public class Matchmaker : BackgroundService {
 
         while (!stoppingToken.IsCancellationRequested) {
 
-            bool createdGame = false;
-            _queueStore.FillGames();
+            try {
+                bool createdGame = false;
+                _queueStore.FillGames();
 
-            _queueStore.CreateMatch(_accessCodeStore);
+                _queueStore.CreateMatch(_accessCodeStore);
 
-            if (stoppingToken.IsCancellationRequested)
-                break;
+                delay = createdGame ? 1 : Math.Min(delay + 1000, 5000);
 
-            delay = createdGame ? 1 : Math.Min(delay + 1000, 5000);
+            } catch (Exception e) {
+                _logger.LogCritical(e.ToString());
+            }
+            
             await Task.Delay(delay, stoppingToken);
         }
         

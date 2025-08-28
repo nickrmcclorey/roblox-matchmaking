@@ -4,8 +4,6 @@ using System.Collections.Concurrent;
 public class GameMode : ConcurrentDictionary<string, SingleRegionQueue> {
 
     public int TeamSize { get; }
-    public ICollection<string> Regions => this.Keys;
-    public ICollection<SingleRegionQueue> SingleRegionQueues => this.Values;
 
     public GameMode(int teamSize) : base() {
         TeamSize = teamSize;

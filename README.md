@@ -7,5 +7,5 @@ Checklist:
 - ~~Check on queue results~~
 - Withdraw from queue
 - ~~Put players in existing games~~
-- Wrap background tasks in try/catch
+- ~~Wrap background tasks in try/catch~~
 - ~~[Configure logging](https://www.youtube.com/watch?v=jHKUvROGyR0)~~

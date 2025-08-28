@@ -1,7 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 [TestClass]
-public class MatchmakingTests {
+public class SingleRegionQueueTest {
 
     [TestMethod]
     public void CanMakeGame() {

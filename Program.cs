@@ -5,7 +5,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Logging.AddAzureWebAppDiagnostics();
 
 // Add services to the container.
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllers();
 
 builder.Services.AddHostedService<Matchmaker>();
 builder.Services.AddHostedService<OldResultsPatrol>();
