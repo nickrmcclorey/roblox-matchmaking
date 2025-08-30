@@ -4,15 +4,18 @@ public class Matchmaker : BackgroundService {
     private readonly ILogger<Matchmaker> _logger;
     private readonly QueueStore _queueStore;
     private readonly AccessCodeStore _accessCodeStore;
+    private readonly UnfilledGamesStore _unfilledGamesStore;
 
     public Matchmaker(
         ILogger<Matchmaker> logger,
         QueueStore queueStore,
-        AccessCodeStore accessCodeStore
+        AccessCodeStore accessCodeStore,
+        UnfilledGamesStore unfilledGamesStore
     ) {
         _logger = logger;
         _queueStore = queueStore;
         _accessCodeStore = accessCodeStore;
+        _unfilledGamesStore = unfilledGamesStore;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken) {
@@ -21,12 +24,11 @@ public class Matchmaker : BackgroundService {
         while (!stoppingToken.IsCancellationRequested) {
 
             try {
-                bool createdGame = false;
-                _queueStore.FillGames();
+                _queueStore.FillGames(_unfilledGamesStore);
 
-                _queueStore.CreateMatch(_accessCodeStore);
+                int createdGames = _queueStore.CreateMatch(_accessCodeStore);
 
-                delay = createdGame ? 1 : Math.Min(delay + 1000, 5000);
+                delay = createdGames > 0 ? 1 : Math.Min(delay + 1000, 5000);
 
             } catch (Exception e) {
                 _logger.LogCritical(e.ToString());

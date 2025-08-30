@@ -10,6 +10,7 @@ builder.Services.AddControllers();
 builder.Services.AddHostedService<Matchmaker>();
 builder.Services.AddHostedService<OldResultsPatrol>();
 builder.Services.AddHostedService<AccessCodeRequestor>();
+
 builder.Services.AddSingleton<AccessCodeStore>();
 builder.Services.AddSingleton<QueueStore>();
 builder.Services.AddSingleton<UnfilledGamesStore>();
@@ -35,7 +36,11 @@ if (!app.Environment.IsDevelopment())
 app.UseRouting();
 
 app.UseAuthorization();
-app.UseMiddleware<ApiKeyMiddleware>();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseMiddleware<ApiKeyMiddleware>();
+}
 
 app.MapControllerRoute(
     name: "default",

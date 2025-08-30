@@ -10,11 +10,7 @@ public class GameMode : ConcurrentDictionary<string, SingleRegionQueue> {
     }
 
     public void Enqueue(string region, int partySize, int leaderId) {
-        if (!this.TryGetValue(region, out var regionQueue)) {
-            this[region] = new SingleRegionQueue(TeamSize);
-            regionQueue = this[region];
-        }
-
+        var regionQueue = this.GetOrAdd(region, new SingleRegionQueue(TeamSize));
         regionQueue[partySize - 1].Enqueue(leaderId);
     }
 

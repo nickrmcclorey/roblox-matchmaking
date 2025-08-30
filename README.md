@@ -9,3 +9,5 @@ Checklist:
 - ~~Put players in existing games~~
 - ~~Wrap background tasks in try/catch~~
 - ~~[Configure logging](https://www.youtube.com/watch?v=jHKUvROGyR0)~~
+- More Unit Tests
+- Integration Tests

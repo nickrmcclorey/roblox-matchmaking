@@ -6,20 +6,18 @@ public class QueueStore {
     private readonly ConcurrentDictionary<int, DatedValue<string>> PlayerResults = new();
     private const int MAX_PARTY_SIZE = 6;
     private readonly ILogger<QueueStore> _logger;
-    private readonly UnfilledGamesStore _unfilledGamesStore;
 
     // queue is only writable from this class. Other classes can only read the data.
     private readonly ConcurrentDictionary<string, GameMode> _queue = new();
-    public IReadOnlyDictionary<string, IReadOnlyDictionary<string, IReadOnlyCollection<IReadOnlyCollection<int>>>> Queue {
-        get { return (IReadOnlyDictionary<string, IReadOnlyDictionary<string, IReadOnlyCollection<IReadOnlyCollection<int>>>>)_queue; }
-    }
+    public IReadOnlyDictionary<string, GameMode> Queue => _queue;
+    // public IReadOnlyDictionary<string, IReadOnlyDictionary<string, IReadOnlyCollection<IReadOnlyCollection<int>>>> Queue {
+    //     get { return (IReadOnlyDictionary<string, IReadOnlyDictionary<string, IReadOnlyCollection<IReadOnlyCollection<int>>>>)_queue; }
+    // }
 
     public QueueStore(
-        ILogger<QueueStore> logger,
-        UnfilledGamesStore unfilledGameStore
+        ILogger<QueueStore> logger
     ) {
         _logger = logger;
-        _unfilledGamesStore = unfilledGameStore;
     }
 
     public WaitResult AddToQueue(string gameModeKey, string regionKey, int leaderId, int partySize) {
@@ -32,14 +30,11 @@ public class QueueStore {
             return WaitResult.BadRequest($"Leader ID {leaderId} already in queue");
         }
 
-        if (!_queue.TryGetValue(gameModeKey, out var gameMode)) {
-            if (!gameModeKey.Contains('-') || !Int32.TryParse(gameModeKey.Split('-')[1], out int teamSize)) {
-                return WaitResult.BadRequest("Game mode must be in format <name>-<team size>");
-            }
-
-            _queue[gameModeKey] = new GameMode(teamSize);
-            gameMode = _queue[gameModeKey];
+        if (!gameModeKey.Contains('-') || !Int32.TryParse(gameModeKey.Split('-')[1], out int teamSize)) {
+            return WaitResult.BadRequest("Game mode must be in format <name>-<team size>");
         }
+
+        var gameMode = _queue.GetOrAdd(gameModeKey, new GameMode(teamSize));
 
         gameMode.Enqueue(regionKey, partySize, leaderId);
         CancellationTokens[leaderId] = new AutoResetEvent(false);
@@ -69,7 +64,7 @@ public class QueueStore {
         return WaitResult.Ready(code.Value);
     }
 
-    public void CreateMatch(ConcurrentQueue<string> accessCodes) {
+    public int CreateMatch(ConcurrentQueue<string> accessCodes) {
         int createdGames = 0;
         foreach (var pair in _queue) {
             var gameMode = pair.Key;
@@ -97,11 +92,12 @@ public class QueueStore {
                 }
             }
         }
+        return createdGames;
     }
 
-    public void FillGames() {
-        _unfilledGamesStore.Mutex.WaitOne();
-        foreach (var unfilledGame in _unfilledGamesStore.Values) {
+    public void FillGames(UnfilledGamesStore unfilledGamesStore) {
+        unfilledGamesStore.Mutex.WaitOne();
+        foreach (var unfilledGame in unfilledGamesStore.Values) {
             if (!_queue.ContainsKey(unfilledGame.GameMode)) {
                 continue;
             }
@@ -112,14 +108,14 @@ public class QueueStore {
                         SendPlayersToGame(new List<int>() { playerId }, unfilledGame.AccessCode);
                         unfilledGame.ExtraPlayersNeeded -= partySize;
                         if (unfilledGame.ExtraPlayersNeeded <= 0) {
-                            _unfilledGamesStore.Remove(unfilledGame.AccessCode);
+                            unfilledGamesStore.Remove(unfilledGame.AccessCode);
                         }
                         break;
                     }
                 }
             }
         }
-        _unfilledGamesStore.Mutex.ReleaseMutex();
+        unfilledGamesStore.Mutex.ReleaseMutex();
     }
 
     public void SendPlayersToGame(List<int> players, string accessCode) {
