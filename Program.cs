@@ -10,6 +10,7 @@ builder.Services.AddControllers();
 builder.Services.AddHostedService<Matchmaker>();
 builder.Services.AddHostedService<OldResultsPatrol>();
 builder.Services.AddHostedService<AccessCodeRequestor>();
+builder.Services.AddHostedService<Startup>();
 
 builder.Services.AddSingleton<AccessCodeStore>();
 builder.Services.AddSingleton<QueueStore>();

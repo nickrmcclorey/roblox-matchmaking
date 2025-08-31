@@ -24,11 +24,19 @@ public class Matchmaker : BackgroundService {
         while (!stoppingToken.IsCancellationRequested) {
 
             try {
+                var start = DateTime.Now;
                 _queueStore.FillGames(_unfilledGamesStore);
+                _logger.LogDebug("Took " + (DateTime.Now - start).TotalMilliseconds + " milliseconds to fill existing games");
 
+                start = DateTime.Now;
                 int createdGames = _queueStore.CreateMatch(_accessCodeStore);
 
                 delay = createdGames > 0 ? 1 : Math.Min(delay + 1000, 5000);
+                if (createdGames > 0) {
+
+                    _logger.LogDebug("Took " + (DateTime.Now - start).TotalMilliseconds + " milliseconds to create new matches");
+                    continue;
+                }
 
             } catch (Exception e) {
                 _logger.LogCritical(e.ToString());

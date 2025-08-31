@@ -43,7 +43,13 @@ public class QueueController : Controller {
             _accessCodeStore.Enqueue(joinRequest.AccessCode);
         }
 
+        DateTime start = DateTime.Now;
         var result = _queueStore.AddToQueue(joinRequest.GameMode.ToLower(), joinRequest.PreferredRegion, joinRequest.PlayerId, joinRequest.PartySize);
+        _logger.LogDebug("Added Player to queue in " + (DateTime.Now - start).TotalMilliseconds + " MilliSeconds");
+        
+        if (result.Status == WaitResult.ResultType.StillWaiting) {
+            return GetResult(_queueStore.WaitForQueueResult(joinRequest.PlayerId), joinRequest.PlayerId);
+        }
         return GetResult(result, joinRequest.PlayerId);
     }
 

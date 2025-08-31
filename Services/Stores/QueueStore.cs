@@ -20,8 +20,24 @@ public class QueueStore {
         _logger = logger;
     }
 
-    public WaitResult AddToQueue(string gameModeKey, string regionKey, int leaderId, int partySize) {
+    public void AddGameMode(string gameMode) {
+        if (!Int32.TryParse(gameMode.Split('-')[1], out int teamSize)) {
+            throw new BadHttpRequestException("GameMode key isn't formatted correctly:" + gameMode);
+        }
 
+        if (!_queue.TryAdd(gameMode, new GameMode(teamSize))) {
+            throw new BadHttpRequestException("GameMode already exists:" + gameMode);
+        }
+    }
+
+    public void AddRegion(string region) {
+        foreach (var pair in _queue) {
+            pair.Value.AddRegion(region);
+        }
+    }
+
+    public WaitResult AddToQueue(string gameModeKey, string regionKey, int leaderId, int partySize) {
+        
         if (partySize > MAX_PARTY_SIZE) {
             return WaitResult.BadRequest($"Party size cannot exceed {MAX_PARTY_SIZE}");
         }
@@ -34,32 +50,35 @@ public class QueueStore {
             return WaitResult.BadRequest("Game mode must be in format <name>-<team size>");
         }
 
-        var gameMode = _queue.GetOrAdd(gameModeKey, new GameMode(teamSize));
-
-        gameMode.Enqueue(regionKey, partySize, leaderId);
+        _queue[gameModeKey].Enqueue(regionKey, partySize, leaderId);
         CancellationTokens[leaderId] = new AutoResetEvent(false);
-        return WaitForQueueResult(leaderId);
+        return WaitResult.StillWaiting();
     }
 
     public WaitResult WaitForQueueResult(int playerId) {
 
+
         // When the matchmaker creates a game, it puts the result in PlayerResults BEFORE removing the CancellationToken
         // It's important to check the Cancellation token before checking PlayerResults to avoid a race condition
-        if (!CancellationTokens.TryGetValue(playerId, out var wait)) {
-            if (!PlayerResults.TryGetValue(playerId, out var accessCode)) {
+        if (!CancellationTokens.ContainsKey(playerId)) {
+            if (!PlayerResults.TryRemove(playerId, out var accessCode)) {
                 return WaitResult.BadRequest($"Player {playerId} not found in queue");
             }
             return WaitResult.Ready(accessCode.Value);
         }
 
-        wait.WaitOne(1000 * 30);
+        DateTime start = DateTime.Now;
+        CancellationTokens[playerId].WaitOne(1000 * 30);
+        _logger.LogDebug("Waited " + (DateTime.Now - start).TotalSeconds + " seconds for match to be created");
         if (!PlayerResults.ContainsKey(playerId)) {
             return WaitResult.StillWaiting();
         }
 
+        start = DateTime.Now;
         if (!PlayerResults.TryRemove(playerId, out var code)) {
             return WaitResult.Error("Match created but could not remove access code from dictionary");
         }
+        _logger.LogDebug("Waited " + (DateTime.Now - start).Milliseconds + " milliseconds to remove PlayerResult");
 
         return WaitResult.Ready(code.Value);
     }
