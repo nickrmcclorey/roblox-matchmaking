@@ -8,11 +8,8 @@ public class QueueStore {
     private readonly ILogger<QueueStore> _logger;
 
     // queue is only writable from this class. Other classes can only read the data.
-    private readonly ConcurrentDictionary<string, GameMode> _queue = new();
+    private readonly Dictionary<string, GameMode> _queue = new();
     public IReadOnlyDictionary<string, GameMode> Queue => _queue;
-    // public IReadOnlyDictionary<string, IReadOnlyDictionary<string, IReadOnlyCollection<IReadOnlyCollection<int>>>> Queue {
-    //     get { return (IReadOnlyDictionary<string, IReadOnlyDictionary<string, IReadOnlyCollection<IReadOnlyCollection<int>>>>)_queue; }
-    // }
 
     public QueueStore(
         ILogger<QueueStore> logger
@@ -25,8 +22,12 @@ public class QueueStore {
             throw new BadHttpRequestException("GameMode key isn't formatted correctly:" + gameMode);
         }
 
-        if (!_queue.TryAdd(gameMode, new GameMode(teamSize))) {
+        if (_queue.ContainsKey(gameMode)) {
             throw new BadHttpRequestException("GameMode already exists:" + gameMode);
+        }
+
+        if (!_queue.TryAdd(gameMode, new GameMode(teamSize))) {
+            throw new Exception("Failed to add gamemode:" + gameMode);
         }
     }
 
@@ -50,18 +51,17 @@ public class QueueStore {
             return WaitResult.BadRequest("Game mode must be in format <name>-<team size>");
         }
 
-        _queue[gameModeKey].Enqueue(regionKey, partySize, leaderId);
         CancellationTokens[leaderId] = new AutoResetEvent(false);
+        _queue[gameModeKey].Enqueue(regionKey, partySize, leaderId);
         return WaitResult.StillWaiting();
     }
 
     public WaitResult WaitForQueueResult(int playerId) {
 
-
         // When the matchmaker creates a game, it puts the result in PlayerResults BEFORE removing the CancellationToken
         // It's important to check the Cancellation token before checking PlayerResults to avoid a race condition
         if (!CancellationTokens.ContainsKey(playerId)) {
-            if (!PlayerResults.TryRemove(playerId, out var accessCode)) {
+            if (!PlayerResults.Remove(playerId, out var accessCode)) {
                 return WaitResult.BadRequest($"Player {playerId} not found in queue");
             }
             return WaitResult.Ready(accessCode.Value);
@@ -75,7 +75,7 @@ public class QueueStore {
         }
 
         start = DateTime.Now;
-        if (!PlayerResults.TryRemove(playerId, out var code)) {
+        if (!PlayerResults.Remove(playerId, out var code)) {
             return WaitResult.Error("Match created but could not remove access code from dictionary");
         }
         _logger.LogDebug("Waited " + (DateTime.Now - start).Milliseconds + " milliseconds to remove PlayerResult");
@@ -141,14 +141,14 @@ public class QueueStore {
         foreach (var player in players) {
             PlayerResults[player] = new DatedValue<string>(accessCode);
             CancellationTokens[player].Set();
-            CancellationTokens.TryRemove(player, out _);
+            CancellationTokens.TryRemove(player, out var _);
         }
     }
 
     public void FailedToQueuePlayers(List<int> players) {
         foreach (var player in players) {
             CancellationTokens[player].Set();
-            CancellationTokens.TryRemove(player, out _);
+            CancellationTokens.TryRemove(player, out var _);
         }
     }
 
@@ -157,7 +157,7 @@ public class QueueStore {
         foreach (var playerId in PlayerResults.Keys) {
             if (PlayerResults.TryGetValue(playerId, out var result)) {
                 if ((now - result.Date).TotalMinutes > 30) {
-                    PlayerResults.TryRemove(playerId, out _);
+                    PlayerResults.TryRemove(playerId, out var _);
                 }
             }
         }
