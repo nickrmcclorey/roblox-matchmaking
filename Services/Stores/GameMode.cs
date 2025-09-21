@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 
 // maps a region (e.g. "eu") to a list of queues, one for each party size
-public class GameMode : ConcurrentDictionary<string, SingleRegionQueue> {
+public class GameMode : Dictionary<string, SingleRegionQueue> {
 
     public int TeamSize { get; }
 
@@ -15,7 +15,7 @@ public class GameMode : ConcurrentDictionary<string, SingleRegionQueue> {
     }
 
     public void AddRegion(string region) {
-        this.TryAdd(region, new SingleRegionQueue(TeamSize));
+        this.Add(region, new SingleRegionQueue(TeamSize));
     }
 
 }
