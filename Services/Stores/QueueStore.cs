@@ -2,8 +2,8 @@ using System.Collections.Concurrent;
 using Matchmaking.Models;
 
 public class QueueStore {
-    private readonly Dictionary<int, AutoResetEvent> CancellationTokens = new();
-    private readonly Dictionary<int, DatedValue<string>> PlayerResults = new();
+    private readonly ConcurrentDictionary<int, AutoResetEvent> CancellationTokens = new();
+    private readonly ConcurrentDictionary<int, DatedValue<string>> PlayerResults = new();
     private const int MAX_PARTY_SIZE = 6;
     private readonly ILogger<QueueStore> _logger;
 
@@ -57,7 +57,6 @@ public class QueueStore {
     }
 
     public WaitResult WaitForQueueResult(int playerId) {
-
 
         // When the matchmaker creates a game, it puts the result in PlayerResults BEFORE removing the CancellationToken
         // It's important to check the Cancellation token before checking PlayerResults to avoid a race condition
@@ -142,14 +141,14 @@ public class QueueStore {
         foreach (var player in players) {
             PlayerResults[player] = new DatedValue<string>(accessCode);
             CancellationTokens[player].Set();
-            CancellationTokens.Remove(player);
+            CancellationTokens.TryRemove(player, out var _);
         }
     }
 
     public void FailedToQueuePlayers(List<int> players) {
         foreach (var player in players) {
             CancellationTokens[player].Set();
-            CancellationTokens.Remove(player);
+            CancellationTokens.TryRemove(player, out var _);
         }
     }
 
@@ -158,7 +157,7 @@ public class QueueStore {
         foreach (var playerId in PlayerResults.Keys) {
             if (PlayerResults.TryGetValue(playerId, out var result)) {
                 if ((now - result.Date).TotalMinutes > 30) {
-                    PlayerResults.Remove(playerId);
+                    PlayerResults.TryRemove(playerId, out var _);
                 }
             }
         }
